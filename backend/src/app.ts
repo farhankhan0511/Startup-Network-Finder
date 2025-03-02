@@ -1,75 +1,109 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import session from "express-session";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { User } from "./models/User.models";
-import { authenticateOAuth } from "./middlewares/auth.middleware";
 import { OAuth2Client } from "google-auth-library";
+import { authenticateOAuth } from "./middlewares/auth.middleware";
+
+// Extend the Express Request type to include user property
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: any;
+  }
+}
 
 const app = express();
 
+// Environment variables check
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  console.error("Missing required environment variables for Google OAuth");
+  process.exit(1);
+}
+
+// Middleware setup - proper order is important
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN, // Set this to your frontend domain
+    origin: process.env.CORS_ORIGIN || "http://localhost:5175",
     credentials: true,
   })
 );
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ limit: "16kb", extended: true }));
 app.use(express.static("public"));
-app.use(cookieParser());
+app.use(cookieParser(process.env.SESSION_SECRET || "yourSecretKey")); // Use same secret as session
 
+// Session middleware - must come before passport middleware
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "yourSecretKey",
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false }, // Set to `true` in production with HTTPS
+    resave: true, // Changed to true to ensure session is saved
+    saveUninitialized: true, // Changed to true for testing
+    cookie: { 
+      secure: false, // Must be false for non-HTTPS local development
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: 'lax'
+    },
+    name: 'connect.sid' // Default name, explicitly set for clarity
   })
 );
 
+// Initialize passport after session middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Configure Google Strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: process.env.GOOGLE_REDIRECT_URI,
+      callbackURL: process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/oauthcallback",
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("Google strategy executing");
+        console.log("Profile:", JSON.stringify(profile, null, 2));
         console.log("Access Token:", accessToken);
         console.log("Refresh Token:", refreshToken);
 
-        let user = await User.findOne({ email: profile.emails?.[0]?.value });
+        // Get email from profile
+        const email = profile.emails?.[0]?.value;
+        if (!email) {
+          console.error("No email found in Google profile");
+          return done(new Error("No email found in Google profile"), false);
+        }
+
+        // Find or create user
+        let user = await User.findOne({ email });
 
         if (!user) {
+          console.log("Creating new user with email:", email);
           user = new User({
-            email: profile.emails?.[0]?.value,
+            email,
             credits: 5,
             refreshtoken: refreshToken || null,
           });
 
           try {
-            await user.save(); // Save the new user
+            await user.save();
             console.log("User created and saved:", user);
           } catch (error) {
             console.error("Error saving new user:", error);
             return done(error, false);
           }
         } else {
-          // If user exists, update the refresh token if necessary
+          console.log("User found:", user);
+          // Update existing user if necessary
           if (refreshToken && refreshToken !== user.refreshtoken) {
             user.refreshtoken = refreshToken;
-
             try {
-              await user.save(); // Update the existing user
-              console.log("User updated and saved:", user);
+              await user.save();
+              console.log("User updated with new refresh token");
             } catch (error) {
               console.error("Error updating user:", error);
               return done(error, false);
@@ -77,8 +111,17 @@ passport.use(
           }
         }
 
-        (profile as any).accessToken = accessToken;
-        return done(null, profile);
+        // Create user object for session
+        const userForSession = {
+          id: user._id.toString(),
+          email: user.email,
+          credits: user.credits,
+          name: profile.displayName || email.split('@')[0],
+          picture: profile.photos?.[0]?.value
+        };
+
+        console.log("User object for session:", userForSession);
+        return done(null, userForSession);
       } catch (error) {
         console.error("Error in GoogleStrategy:", error);
         return done(error, false);
@@ -87,99 +130,129 @@ passport.use(
   )
 );
 
-
-
-passport.serializeUser((user, done) => {
-  done(null, user);
+// User serialization - what goes into the session
+passport.serializeUser((user: any, done) => {
+  console.log("Serializing user:", user);
+  // Store only the user ID in the session
+  done(null, user.id);
 });
 
-passport.deserializeUser((user: any, done) => {
-  done(null, user);
+// User deserialization - how to get user data from the stored session ID
+passport.deserializeUser(async (id: string, done) => {
+  console.log("Deserializing user ID:", id);
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      console.log("User not found during deserialization");
+      return done(null, false);
+    }
+    // Return user object without sensitive data
+    const userForRequest = {
+      id: user._id,
+      email: user.email,
+      credits: user.credits
+    };
+    console.log("Deserialized user:", userForRequest);
+    return done(null, userForRequest);
+  } catch (error) {
+    console.error("Error deserializing user:", error);
+    return done(error, false);
+  }
 });
 
-
+// 
 
 // Google OAuth Login Route
-app.get('/auth/google', passport.authenticate('google', {
+app.get('/auth/google', (req, res, next) => {
+  console.log("Starting Google Auth");
+  next();
+}, passport.authenticate('google', {
   scope: ['profile', 'email'],
   accessType: 'offline',
-  prompt: 'consent',
+  prompt: 'consent', // Force approval prompt to get refresh token
 }));
-// OAuth callback route
+
 // OAuth callback route
 app.get(
   "/oauthcallback",
-  passport.authenticate("google", { failureRedirect: "/" }),
-  async (req, res) => {
-    try {
-      // Access the refresh token from the request object
-      const refreshToken = req.user.refreshToken;
-
-      // Store the refresh token in your database
-      const user = await User.findOne({ email: req.user.emails[0].value });
-      if (user) {
-        user.refreshtoken = refreshToken;
-        await user.save();
-      } else {
-        // Handle the case where the user is not found
-        console.error("User not found in the database.");
+  (req, res, next) => {
+    console.log("OAuth callback received");
+    next();
+  },
+  passport.authenticate("google", { 
+    failureRedirect: "http://localhost:5175/login?error=true"
+  }),
+  (req: Request, res: Response) => {
+    console.log("OAuth callback - Authentication successful");
+    console.log("User after auth:", req.user);
+    console.log("Session:", req.session);
+    
+    // Verify the session is being saved properly
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).send("Error saving session");
       }
-
-      // Redirect to your frontend page after login
-      res.redirect(`http://localhost:5175/browse`);
-    } catch (error) {
-      console.error("Error in OAuth callback:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+      console.log("Session saved successfully");
+      res.redirect("http://localhost:5175/browse");
+    });
   }
 );
 
-
-
-// Profile Route (User must be logged in)
-app.get("/profile", async (req: Request, res: Response): Promise<any> => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
-  // Retrieve the user's refresh token from the database
-  const user = await User.findOne({ email: req.user.emails?.[0]?.value });
-  if (!user) {
-    return res.status(400).json({ message: "Refresh token not found" });
-  }
-
-  // Initialize the OAuth2 client
-  const oauth2Client = new OAuth2Client(
-    process.env.GOOGLE_CLIENT_ID!,
-    process.env.GOOGLE_CLIENT_SECRET!
-  );
-
-  // Set the credentials with the stored refresh token
-  oauth2Client.setCredentials({
-    refresh_token: user.refreshtoken,
-  });
-
-  try {
-    // Get a new access token using the refresh token
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    const newAccessToken = credentials.access_token;
-
-    // Include the new access token in the response
-    res.json({ user: req.user, accessToken: newAccessToken });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to refresh access token", error });
-  }
+// Profile Route (Protected)
+app.get('/profile', authenticateOAuth, (req: Request, res: Response) => {
+  res.json({ user: req.user });
 });
+
+// Auth status endpoint
+// app.get('/auth/status', (req: Request, res: Response) => {
+//   console.log("Auth status - Session:", req.session);
+//   console.log("Auth status - isAuthenticated:", req.isAuthenticated());
+//   console.log("Auth status - User:", req.user);
+  
+//   if (req.isAuthenticated()) {
+//     return res.json({ 
+//       authenticated: true, 
+//       user: req.user 
+//     });
+//   }
+//   return res.json({ authenticated: false });
+// });
 
 // Logout Route
-app.get("/logout", (req, res) => {
-  req.logout(() => {
-    res.json({ message: "Logged out successfully" });
+app.get("/logout", (req: Request, res: Response) => {
+  console.log("Logout initiated");
+  req.logout((err) => {
+    if (err) {
+      console.error("Error during logout:", err);
+      return res.status(500).json({ message: "Error during logout" });
+    }
+    // Clear the session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying session:", err);
+      }
+      console.log("Session destroyed, clearing cookie");
+      res.clearCookie('connect.sid'); // Clear the session cookie
+      res.json({ message: "Logged out successfully" });
+    });
   });
 });
 
-import Serachrouter from "./routes/search.route";
+// Create separate middleware file for authenticateOAuth
 
-app.use(Serachrouter);
+
+// Error handling middleware
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error("Server error:", err);
+  res.status(500).json({ 
+    message: "Server error", 
+    error: process.env.NODE_ENV === 'production' ? null : err.message 
+  });
+});
+
+// Import your other routes
+import SearchRouter from "./routes/search.route";
+app.use("/", SearchRouter);
 
 export default app;

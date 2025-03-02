@@ -1,15 +1,16 @@
 // import React from 'react'
 import { useEffect } from 'react';
 import GptSearch from './GptSearch'
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addUser } from '../utils/userSlice';
 
 
 const Browse = () => {
   const dispatch=useDispatch()
+  const user=useSelector((store)=>store?.user)
   useEffect(() => {
     // Fetch user profile data from the backend
-    fetch("http://localhost:8080/profile")
+    !user && fetch("http://localhost:8080/profile",{credentials: "include"})
       .then((response) => response.json())
       .then((data) => {
         (data.user);

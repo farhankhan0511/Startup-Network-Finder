@@ -4,7 +4,8 @@
   "description": "This is the backend for the assignment of formpilot ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsc && node dist/server.js"
   },
   "author": "Farhan Khan",
   "license": "ISC",

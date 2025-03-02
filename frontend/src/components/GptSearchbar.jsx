@@ -6,21 +6,22 @@ const GptSearchbar = () => {
     // const dispatch = useDispatch();
 
     const handleGptSearch = async () => {
-        const query = intext.current.value.trim();
-        if (!query) return;
+        const value = intext.current.value.trim();
+        if (!value) return;
+        const prompt={
+            "prompt":value
+        }
 
 
-        console.log("Searching for:", query);
+        console.log("Searching for:", prompt);
 
-        await fetch()
-
-        // Example Redux Dispatch (Uncomment if using Redux)
-        // dispatch(fetchGptResults(query));
-
-        // Example API Call (Replace with actual API)
-        // const response = await fetch(`/api/search?query=${query}`);
-        // const data = await response.json();
-        // console.log(data);
+        const data=await fetch("http://localhost:8080/search",
+        {method:'POST',
+        headers:{'Content-Type':'application/json',},credentials:"include",
+      body: JSON.stringify(prompt)})
+        const response=await data.json()
+        console.log(response)
+        
     };
 
     return (

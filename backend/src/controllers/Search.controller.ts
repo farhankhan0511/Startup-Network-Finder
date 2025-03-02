@@ -23,15 +23,15 @@ export const Searchcontrol=asynchandler(async(req:Request,res:Response)=>{
 
     const {prompt}=req.body;
     try {
-        const user=req.user;
-        if(!user){
+        // const user=req.user;
+        // if(!user){
             
-            return res.status(statuscodes.BADREQUEST).json(new ApiResponse(statuscodes.BADREQUEST,{},"Unauthorized Request"));
-        }
-        if(user.credits<=0){
-            await SendMail(user.email,"Low Credit Warning",creditExhaustTemplate(user.email))
-            return res.status(statuscodes.BADREQUEST).json(new ApiResponse(statuscodes.BADREQUEST,{},"Your credits are exhausted. Please check your email to recharge"));
-        }
+        //     return res.status(statuscodes.BADREQUEST).json(new ApiResponse(statuscodes.BADREQUEST,{},"Unauthorized Request"));
+        // }
+        // if(user.credits<=0){
+        //     await SendMail(user.email,"Low Credit Warning",creditExhaustTemplate(user.email))
+        //     return res.status(statuscodes.BADREQUEST).json(new ApiResponse(statuscodes.BADREQUEST,{},"Your credits are exhausted. Please check your email to recharge"));
+        // }
         const data=await Investmentor.find({});
         //taking all the data from the database
         if (!data){
@@ -53,13 +53,13 @@ export const Searchcontrol=asynchandler(async(req:Request,res:Response)=>{
             }            
             console.log(result.response.text());
         
-        const updateduser=await User.findByIdAndUpdate(user._id,{
-            $inc:{
-                "credits":-1
-            }},{ new: true})
-        if(!updateduser){
-            return res.status(statuscodes.INTERNALERROR).json(new ApiResponse(statuscodes.INTERNALERROR,{},"Error while handling credits"));
-        }
+        // const updateduser=await User.findByIdAndUpdate(user._id,{
+        //     $inc:{
+        //         "credits":-1
+        //     }},{ new: true})
+        // if(!updateduser){
+        //     return res.status(statuscodes.INTERNALERROR).json(new ApiResponse(statuscodes.INTERNALERROR,{},"Error while handling credits"));
+        // }
         res.status(statuscodes.SUCCESFULL).json(new ApiResponse(statuscodes.SUCCESFULL,result,"Response generated Successfully"))
 
             
