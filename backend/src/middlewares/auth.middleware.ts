@@ -11,9 +11,7 @@ declare module "express-serve-static-core"{
     }
 
 export const authenticateOAuth=asynchandler(async(req: Request, res: Response, next: NextFunction) =>{
-    console.log("Session:", req.session);
-  console.log("Is authenticated:", req.isAuthenticated());
-  console.log("User:", req.user);
+   
     if (req.isAuthenticated()) {
       return next();
     }   

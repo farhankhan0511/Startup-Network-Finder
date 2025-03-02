@@ -66,10 +66,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        console.log("Google strategy executing");
-        console.log("Profile:", JSON.stringify(profile, null, 2));
-        console.log("Access Token:", accessToken);
-        console.log("Refresh Token:", refreshToken);
+        
 
         // Get email from profile
         const email = profile.emails?.[0]?.value;
@@ -132,14 +129,14 @@ passport.use(
 
 // User serialization - what goes into the session
 passport.serializeUser((user: any, done) => {
-  console.log("Serializing user:", user);
+  
   // Store only the user ID in the session
   done(null, user.id);
 });
 
 // User deserialization - how to get user data from the stored session ID
 passport.deserializeUser(async (id: string, done) => {
-  console.log("Deserializing user ID:", id);
+  
   try {
     const user = await User.findById(id);
     if (!user) {
@@ -152,7 +149,6 @@ passport.deserializeUser(async (id: string, done) => {
       email: user.email,
       credits: user.credits
     };
-    console.log("Deserialized user:", userForRequest);
     return done(null, userForRequest);
   } catch (error) {
     console.error("Error deserializing user:", error);
@@ -164,7 +160,7 @@ passport.deserializeUser(async (id: string, done) => {
 
 // Google OAuth Login Route
 app.get('/auth/google', (req, res, next) => {
-  console.log("Starting Google Auth");
+ 
   next();
 }, passport.authenticate('google', {
   scope: ['profile', 'email'],
@@ -183,9 +179,7 @@ app.get(
     failureRedirect: "http://localhost:5175/login?error=true"
   }),
   (req: Request, res: Response) => {
-    console.log("OAuth callback - Authentication successful");
-    console.log("User after auth:", req.user);
-    console.log("Session:", req.session);
+    
     
     // Verify the session is being saved properly
     req.session.save((err) => {
@@ -193,7 +187,6 @@ app.get(
         console.error("Session save error:", err);
         return res.status(500).send("Error saving session");
       }
-      console.log("Session saved successfully");
       res.redirect("http://localhost:5175/browse");
     });
   }
