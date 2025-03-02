@@ -13,8 +13,8 @@ class TokenManager {
   private currentTokens: TokenInfo = {
     // Ideally, these initial tokens should come from persistent storage.
     // For demonstration, we're using tokens obtained from OAuth Playground.
-    access_token: "ya29.a0AXeO80QjLXbKFIbcSckI3fiHx-EZMlmFhwtrt5gC5nL5G_Xq9UvWLZrPJWdWn6DgWqxq20YZ7v33Ce5Vtr9NuyPL-WZQLFIEdO03fLT4AD0oamkzNIUde3ZXGokSM3apEw8zBZmcpCob704166KhcHgYOqZDgJGUbweEpS8TaCgYKAeMSARASFQHGX2MiOP89nhMK-00gsHOSJxrFGw0175",
-    refresh_token: "1//04DNrm6bElreXCgYIARAAGAQSNwF-L9IruJBKvQ5laePVnfXxM9XJEX43t5rNVOPGJRyp1FIOrjhqe_ct3OyFKel3g8T63mOoXHQ"
+    access_token:process.env.ACCESSTOKEN!,
+    refresh_token:process.env.REFRESHTOKEN!
   };
 
   private constructor() {

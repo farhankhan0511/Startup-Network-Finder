@@ -25,7 +25,7 @@ export async function processEmails() {
   const query = `is:unread after:${sinceTime} subject:"Recharge 5 credits"`;
 
   const userId = 'me';
-  const response = await gmails.users.messages.list({ userId:userId });
+  const response = await gmails.users.messages.list({ userId:userId,q:query});
   
   if (!response.data.messages || response.data.messages.length === 0) {
     console.log('No messages found');
