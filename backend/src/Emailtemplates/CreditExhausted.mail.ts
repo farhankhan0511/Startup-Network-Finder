@@ -1,6 +1,6 @@
 export const creditExhaustTemplate = (email:string) => {
     const rechargeEmail = process.env.EMAIL_USER; 
-    const subject = encodeURIComponent("recharge 5 credits");
+    const subject = encodeURIComponent("Recharge 5 credits");
     const body = encodeURIComponent(`Hello,\n\nI would like to recharge my account with 5 credits.\n\nThanks,\n${email}`);
   
     return `
@@ -14,7 +14,7 @@ export const creditExhaustTemplate = (email:string) => {
              style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
              Recharge Now
           </a>
-          <p>Or send an email to <a href="mailto:${rechargeEmail}">${rechargeEmail}</a> with the subject <b>"recharge 5 credits"</b>.</p>
+          <p>Or send an email to <a href="mailto:${rechargeEmail}">${rechargeEmail}</a> with the subject <b>"Recharge 5 credits"</b>.</p>
           <p>Thank you!</p>
         </body>
       </html>
