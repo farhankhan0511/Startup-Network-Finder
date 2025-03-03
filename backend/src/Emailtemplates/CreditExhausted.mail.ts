@@ -9,7 +9,7 @@ export const creditExhaustTemplate = (email:string) => {
           <h3 style="color: #ff4c4c;">⚠️ Low Credits Alert</h3>
           <p>Dear ${email},</p>
           <p>Your account is running low on credits.</p>
-          <p><b>To recharge:</b> Click the button below to send an email request.</p>
+          <p><b>To recharge:</b> Click the button below to send an email request.Your Credits will be replinished within 10 minutes</p>
           <a href="mailto:${rechargeEmail}?subject=${subject}&body=${body}" 
              style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
              Recharge Now
