@@ -11,7 +11,7 @@
       });
 
       // Cron job to check and process emails every hour
-      cron.schedule("*/10 * * * *", async () => {
+      cron.schedule("*/5 * * * *", async () => {
         try {
           console.log("Running check task...");
           await processEmails(); // Process the emails for credit recharging

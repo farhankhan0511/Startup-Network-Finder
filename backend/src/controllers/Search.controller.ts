@@ -42,7 +42,7 @@ export const Searchcontrol=asynchandler(async(req:Request,res:Response)=>{
         const gprompt = `Act as a data insighter and give the appropriate response to the following query based on the data provided below.
     Example:
     Input: We are a video OTT platform, currently seeking an investor to fuel company growth.
-    Output: Honia.
+    Output: Honia.(give the _id parameter if available seperated by comma)
     Here's how you will generate the response:
     Query: ${prompt}
     Data: ${JSON.stringify(data, null, 2)}`;

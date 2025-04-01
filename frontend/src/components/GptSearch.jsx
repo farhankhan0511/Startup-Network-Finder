@@ -1,16 +1,11 @@
-
-
-import GptSearchbar from './GptSearchbar'
+import GptSearchbar from './GptSearchbar';
 
 const GptSearch = () => {
-   
-  return (   
-        
-    <div>
-        <GptSearchbar/>
+  return (
+    <div className="w-full ">
+      <GptSearchbar/>
     </div>
-    
-  )
+  );
 }
 
-export default GptSearch
+export default GptSearch;
